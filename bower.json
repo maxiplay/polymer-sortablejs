@@ -26,6 +26,6 @@
   ],
   "dependencies": {
     "polymer": "polymer/polymer#^1.6.0",
-    "Sortable": "DreamworldSolutions/sortablejs#1.5.2"
+    "Sortable": "DreamworldSolutions/Sortable#1.5.2"
   }
 }
