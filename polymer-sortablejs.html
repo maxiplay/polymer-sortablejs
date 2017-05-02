@@ -32,7 +32,18 @@
       fallbackClass     : { type: String, value: "sortable-fallback", observer: "fallbackClassChanged" },
       fallbackOnBody    : { type: Boolean, value: false, observer: "fallbackOnBodyChanged" },
       draggable         : {},
-      scroll            : {}
+      scroll            : {},
+      preventOnFilter   : {type: Boolean, value: false, observer: "preventOnFilterChanged"},
+      /**
+      * Represents name of order field which have order of item
+      * If order field name is defined then set new order of item based on new possition and set 
+      * update items models into event data as `items`
+      */
+      orderFieldName    : {type: String},
+      /**
+      * Set true to use polymer method instead of others
+      */
+      forcePolymer      : {type: Boolean, value: false, observer: "forcePolymerChanged"}
     },
 
     created: function() {
@@ -67,7 +78,7 @@
 
     initialize: function() {
       var templates = this.querySelectorAll("template[is='dom-repeat']");
-      var template = templates[templates.length-1];
+      var template = this.template = templates[templates.length-1];
 
       var options = {};
       Object.keys(this.properties).forEach(function(key) {
@@ -78,14 +89,18 @@
       var eventCallbacks = {
         onUpdate: function (e) {
           if (template) {
-            template.splice("items", e.newIndex, 0, template.splice("items", e.oldIndex, 1)[0]);
-						/*
+            if(_this.orderFieldName) {
+              _this._setItemorder(e);
+            }else {
+              template.splice("items", e.newIndex, 0, template.splice("items", e.oldIndex, 1)[0]);
+            }
+            /*
             if (manuallyHandleUpdateEvents) {
               template.items.splice(e.newIndex, 0, template.items.splice(e.oldIndex, 1)[0]);
             } else {
               template.splice("items", e.newIndex, 0, template.splice("items", e.oldIndex, 1)[0]);
             }
-						*/
+            */
           }
           _this.fire("update", e);
         },
@@ -180,6 +195,84 @@
     delayChanged             : function(value) { this.sortable && this.sortable.option("delay", value); },
     forceFallbackChanged     : function(value) { this.sortable && this.sortable.option("forceFallback", value); },
     fallbackClassChanged     : function(value) { this.sortable && this.sortable.option("fallbackClass", value); },
-    fallbackOnBodyChanged    : function(value) { this.sortable && this.sortable.option("fallbackOnBody", value); }
+    fallbackOnBodyChanged    : function(value) { this.sortable && this.sortable.option("fallbackOnBody", value); },
+    preventOnFilterChanged   : function(value) { this.sortable && this.sortable.option("preventOnFilter", value); },
+    forcePolymerChanged      : function(value) { this.sortable && this.sortable.option("forcePolymer", value); },
+    
+    /**
+    * Set new order of item which position is chagned
+    */
+    _setItemorder: function(oValue) {
+      var self = this;
+      oValue.items = [];
+      var oCurrentModel = self.template.modelForElement(oValue.item);
+      var nIndex = self._getItemIndex(oCurrentModel.item);
+      oValue.items.push(oCurrentModel.item);
+      
+      var aAllItems = self.queryAllEffectiveChildren('.drag-item');
+      var elPrevItem = aAllItems[oValue.newIndex - 1];
+      var oPrevModel = self.template.modelForElement(elPrevItem);
+      if(!oPrevModel) {
+        var elFirstItem = aAllItems[oValue.newIndex + 1];
+        var oFirstModel = self.template.modelForElement(elFirstItem);
+        self._setNewOrder((oFirstModel.item.order - 100), nIndex);
+        return;
+      }
+      
+      var elNextItem = aAllItems[oValue.newIndex + 1];
+      var oNextModel = self.template.modelForElement(elNextItem);
+      if(!oNextModel) {
+        var elLastItem = aAllItems[oValue.newIndex - 1];
+        var oLastModel = self.template.modelForElement(elLastItem);
+        self._setNewOrder((oLastModel.item.order + 100), nIndex);
+        return;
+      }
+      
+      var nNewOrder = parseInt((oPrevModel.item.order + oNextModel.item.order)/2);
+      if(Math.abs(parseInt(oPrevModel.item.order - oNextModel.item.order)) < 2) {
+        nNewOrder = nNewOrder + 100;
+        var nPrevItemOrder = nNewOrder;
+        aAllItems.forEach(function(el, index) {
+          if(index > oValue.newIndex) {
+            var oModel = self.template.modelForElement(el);
+            if(oModel && (oModel.item.order < nPrevItemOrder)) {
+              oValue.items.push(oModel.item);
+              oModel.set('item.order', nPrevItemOrder + 100);
+              nPrevItemOrder = nPrevItemOrder + 100;
+            }
+          }
+        });
+      }
+      self._setNewOrder(nNewOrder, nIndex);
+    },
+    
+    /**
+    * Set order order of dropped item
+    */
+    _setNewOrder: function(order, key) {
+      var self = this;
+      var oRemovedItem = self.template.splice('items', key, 1)[0];
+      oRemovedItem.order = order;
+      self.async(function() {
+        self.template.splice('items', key, 0, oRemovedItem);
+      }, 0);
+    },
+    
+    /**
+    * Return index of item
+    */
+    _getItemIndex: function(item) {
+      var self = this;
+      
+      var nIndex = -1;
+      if (self.template) {
+        self.template.items.forEach(function(tempItem, index) {
+          if(nIndex == -1 && item === tempItem) {
+            nIndex = index;
+          }
+        });
+      }
+      return nIndex;
+    }
   });
 </script>
