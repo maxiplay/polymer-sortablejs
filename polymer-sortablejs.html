@@ -209,7 +209,7 @@
       var nIndex = self._getItemIndex(oCurrentModel.item);
       oValue.items.push(oCurrentModel.item);
       
-      var aAllItems = self.queryAllEffectiveChildren('.drag-item');
+      var aAllItems = self.querySelectorAll('.drag-item');
       var elPrevItem = aAllItems[oValue.newIndex - 1];
       var oPrevModel = self.template.modelForElement(elPrevItem);
       if(!oPrevModel) {
