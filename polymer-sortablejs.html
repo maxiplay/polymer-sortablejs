@@ -161,7 +161,13 @@
         options[name] = eventCallbacks[name];
       });
 
-      this.sortable = Sortable.create(this, options);
+      if(window.Sortable) {
+        _this.sortable = Sortable.create(_this, options);
+      }else if(typeof require === 'function') {
+        require(['Sortable'], function(Sortable) {
+          _this.sortable = Sortable.create(_this, options);
+        });
+      }
     },
 
     destroy: function() {
