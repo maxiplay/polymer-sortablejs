@@ -77,6 +77,27 @@
 
 
     initialize: function() {
+      var _this = this;
+      
+      if(window.Sortable) {
+        _this.sortable = Sortable.create(_this, _this._getOptions());
+      }else if(typeof require === 'function') {
+        require(['Sortable'], function(Sortable) {
+          _this.sortable = Sortable.create(_this, _this._getOptions());
+        });
+      }
+    },
+
+    destroy: function() {
+      if(this.sortable) {
+        this.sortable.destroy();
+      }
+    },
+    
+    /**
+    * Retunr options of sortable plugin
+    */
+    _getOptions: function() {
       var templates = this.querySelectorAll("template[is='dom-repeat']");
       var template = this.template = templates[templates.length-1];
 
@@ -160,20 +181,8 @@
       Object.keys(eventCallbacks).forEach(function(name){
         options[name] = eventCallbacks[name];
       });
-
-      if(window.Sortable) {
-        _this.sortable = Sortable.create(_this, options);
-      }else if(typeof require === 'function') {
-        require(['Sortable'], function(Sortable) {
-          _this.sortable = Sortable.create(_this, options);
-        });
-      }
-    },
-
-    destroy: function() {
-      if(this.sortable) {
-        this.sortable.destroy();
-      }
+      
+      return options;
     },
 
     groupChanged             : function(value) { 
