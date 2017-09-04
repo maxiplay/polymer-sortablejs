@@ -41,6 +41,11 @@
       */
       orderFieldName    : {type: String},
       /**
+      * Represents type of sorting ('asc' | 'desc')
+      * Sort items in ascending order if `sortBy` value is `asc` otherwise sort items in descending order
+      */
+      sortBy            : {type: String, value: 'asc'},
+      /**
       * Set true to use polymer method instead of others
       */
       forcePolymer      : {type: Boolean, value: false, observer: "forcePolymerChanged"}
@@ -219,6 +224,15 @@
     */
     _setItemorder: function(oValue) {
       var self = this;
+      if(!self.orderFieldName) {
+        return;
+      }
+      
+      var nNewOrderDiff = 100;
+      if(self.sortBy !== 'asc') {
+        nNewOrderDiff = -100;
+      }
+      
       oValue.items = [];
       var oCurrentModel = self.template.modelForElement(oValue.item);
       var nIndex = self._getItemIndex(oCurrentModel.item);
@@ -230,7 +244,7 @@
       if(!oPrevModel) {
         var elFirstItem = aAllItems[oValue.newIndex + 1];
         var oFirstModel = self.template.modelForElement(elFirstItem);
-        self._setNewOrder((oFirstModel.item.order - 100), nIndex);
+        self._setNewOrder((oFirstModel.item[self.orderFieldName] - nNewOrderDiff), nIndex);
         return;
       }
       
@@ -239,21 +253,21 @@
       if(!oNextModel) {
         var elLastItem = aAllItems[oValue.newIndex - 1];
         var oLastModel = self.template.modelForElement(elLastItem);
-        self._setNewOrder((oLastModel.item.order + 100), nIndex);
+        self._setNewOrder((oLastModel.item[self.orderFieldName] + nNewOrderDiff), nIndex);
         return;
       }
       
-      var nNewOrder = parseInt((oPrevModel.item.order + oNextModel.item.order)/2);
-      if(Math.abs(parseInt(oPrevModel.item.order - oNextModel.item.order)) < 2) {
-        nNewOrder = nNewOrder + 100;
+      var nNewOrder = parseInt((oPrevModel.item[self.orderFieldName] + oNextModel.item[self.orderFieldName])/2);
+      if(Math.abs(parseInt(oPrevModel.item[self.orderFieldName] - oNextModel.item[self.orderFieldName])) < 2) {
+        nNewOrder = nNewOrder + nNewOrderDiff;
         var nPrevItemOrder = nNewOrder;
         aAllItems.forEach(function(el, index) {
           if(index > oValue.newIndex) {
             var oModel = self.template.modelForElement(el);
-            if(oModel && (oModel.item.order < nPrevItemOrder)) {
+            if(oModel && (oModel.item[self.orderFieldName] < nPrevItemOrder)) {
               oValue.items.push(oModel.item);
-              oModel.set('item.order', nPrevItemOrder + 100);
-              nPrevItemOrder = nPrevItemOrder + 100;
+              oModel.set('item.' + self.orderFieldName, nPrevItemOrder + nNewOrderDiff);
+              nPrevItemOrder = nPrevItemOrder + nNewOrderDiff;
             }
           }
         });
@@ -267,7 +281,7 @@
     _setNewOrder: function(order, key) {
       var self = this;
       var oRemovedItem = self.template.splice('items', key, 1)[0];
-      oRemovedItem.order = order;
+      oRemovedItem[self.orderFieldName] = order;
       self.async(function() {
         self.template.splice('items', key, 0, oRemovedItem);
       }, 0);
